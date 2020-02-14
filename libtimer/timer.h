@@ -1,21 +1,23 @@
-#ifndef MSP430_H
-#include <msp430.h>
-#endif
-#ifndef STDINT_H
+/*
+ * timer.h
+ *
+ *  Created on: 07 feb 2020
+ *      Author: Giulio Corradini
+ */
+
+#ifndef TIMER_H_
+#define TIMER_H_
+
 #include <stdint.h>
-#endif
 
+#define UP_MODE MC_1;
+#define CONTINUOS_MODE  MC_2;
+#define UP_DOWN_MODE    MC_3;
 
-//Configuration
-void timer_init();
-void timer_set_callback(void* callback_function);
-
-
-//Flow control
+void timer_config(uint16_t mode);
+void timer_set_callback();
 void timer_start();
 void timer_stop();
-void timer_reset();
 
 
-//Query
-uint64_t millis();
+#endif /* TIMER_H_ */

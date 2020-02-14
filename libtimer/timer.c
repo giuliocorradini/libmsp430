@@ -1,7 +1,7 @@
 /*
  * timer.c
  *
- *  Created on: 21 gen 2020
+ *  Created on: 07 feb 2020
  *      Author: Giulio Corradini
  */
 
@@ -9,62 +9,41 @@
 #include <stdint.h>
 #include <timer.h>
 
-static uint64_t millisecond_counter = 0;
-
-void default_callback_function() {
-    //Do absolutely nothing
+void __timer_default_callback() {
+    ;;
 }
 
-void (callback*)() = &default_callback_function;
+static uint16_t __timer_count_mode = MC_0;
 
-void timer_init() {
-    //Clear timer
-    TA0CTL |= TACLR;
+void (*__timer_callback_function)() = &__timer_default_callback;
 
-    //Configuring registers for Timer A0
-    TA0CTL |= TASSEL_1; //ACLK
+void timer_config(uint16_t mode) {
+    TA0CTL |= TACLR;    //Reset timer
+    TA0CTL |= TASSEL_1;
+    TA0CTL |= ID_0;
 
-    //Enabling flags
-    TA0CTL |= TAIE;
     TA0CTL &= ~TAIFG;
+    TA0CTL |= TAIE;     //Enable interrupt
 
-    TA0CCTL0 |= CCIE;
+    TA0CCR0 = 0x7fff;
 
-    //Count up to 32 (1ms)
-    TA0CCR0 = 0x20;
-
-    __enable_interrupt();
+    __timer_count_mode = mode;
 }
-
-void timer_set_callback(void (user_callback_function*)()) {
-    callback = &user_callback_function;
-}
-
-
 
 void timer_start() {
-    TA0CTL &= ~TAIFG;
-    TA0CTL |= MC_1;
+    TA0CTL |= __timer_count_mode;     //Timer is enabled, continuous mode
 }
 
 void timer_stop() {
-    TA0CTL &= ~MC_0;
+    TA0CTL |= MC_0;     //Timer is halted
 }
 
-void timer_reset() {
-    timer_stop();
-    millisecond_counter = 0;
+void timer_set_callback(void (*callback_function)()) {
+    __timer_callback_function = callback_function;
 }
 
-
-uint64_t millis() {
-    return millisecond_counter;
-}
-
-
-
-#pragma vector = TIMER0_A0_VECTOR
-__interrupt void timer_interrupt_function() {
-    millisecond_counter++;
+#pragma vector = TIMER0_A1_VECTOR
+__interrupt void timer_interrupt_callback() {
+    (*__timer_callback_function)();
     TA0CTL &= ~TAIFG;
 }
