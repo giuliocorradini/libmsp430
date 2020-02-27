@@ -1,7 +1,7 @@
 /*
  * timer.c
  *
- *  Created on: 07 feb 2020
+ *  Created on: 24 gen 2020
  *      Author: Giulio Corradini
  */
 
@@ -9,41 +9,64 @@
 #include <stdint.h>
 #include <timer.h>
 
-void __timer_default_callback() {
-    ;;
-}
+static uint16_t timer_counting_mode = MC_1;     //Timer counting mode is Up/Down
+static uint32_t timer_millis_counter = 0;
 
-static uint16_t __timer_count_mode = MC_0;
-
-void (*__timer_callback_function)() = &__timer_default_callback;
-
-void timer_config(uint16_t mode) {
+void timer_init() {
     TA0CTL |= TACLR;    //Reset timer
-    TA0CTL |= TASSEL_1;
-    TA0CTL |= ID_0;
 
-    TA0CTL &= ~TAIFG;
-    TA0CTL |= TAIE;     //Enable interrupt
 
-    TA0CCR0 = 0x7fff;
+    TA0CTL = TASSEL_2 + ID_0 + timer_counting_mode; //Select SMCLK as clock source and enable interrupts
 
-    __timer_count_mode = mode;
+    __enable_interrupt();
+
+    TA0CCR0 = 1050;     //Counts up to 1000 in order to have milliseconds interrupt
 }
 
 void timer_start() {
-    TA0CTL |= __timer_count_mode;     //Timer is enabled, continuous mode
+    TA0CCTL0 |= CCIE;
+}
+
+void timer_reset() {
+    TA0CTL |= TACLR;
+    timer_millis_counter = 0;
 }
 
 void timer_stop() {
-    TA0CTL |= MC_0;     //Timer is halted
+    TA0CCTL0 &= ~CCIE;
 }
 
-void timer_set_callback(void (*callback_function)()) {
-    __timer_callback_function = callback_function;
+void timer_reset_millis() {
+    timer_millis_counter = 0;
 }
 
-#pragma vector = TIMER0_A1_VECTOR
-__interrupt void timer_interrupt_callback() {
-    (*__timer_callback_function)();
-    TA0CTL &= ~TAIFG;
+void timer_set_counting_mode(uint16_t cm) {
+    timer_counting_mode = cm & 0x0030;
+}
+
+void timer_set_compare_value(uint16_t cv) {
+    TA0CCR0 = cv;
+}
+
+uint32_t millis() {
+    return timer_millis_counter;
+}
+
+uint32_t minutes() {
+    return timer_millis_counter / 60000;
+}
+
+#pragma vector = TIMER0_A0_VECTOR
+__interrupt void int_callback_millis_count(void) {
+    timer_millis_counter++;
+    TA0CTL &= ~TAIE;
+}
+
+void wait(int ms) {
+    int time = millis();
+    int new_time = millis();
+
+    do {
+        new_time = millis();
+    } while (new_time - time > ms);
 }

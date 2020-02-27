@@ -1,23 +1,17 @@
-/*
- * timer.h
- *
- *  Created on: 07 feb 2020
- *      Author: Giulio Corradini
- */
-
-#ifndef TIMER_H_
-#define TIMER_H_
-
+#ifndef TIMER_H
+#define TIMER_H
+#include <msp430.h>
 #include <stdint.h>
 
-#define UP_MODE MC_1;
-#define CONTINUOS_MODE  MC_2;
-#define UP_DOWN_MODE    MC_3;
-
-void timer_config(uint16_t mode);
-void timer_set_callback();
+void timer_init();
+void timer_reset();
 void timer_start();
 void timer_stop();
+void timer_set_counting_mode(uint16_t cm);
+void timer_set_compare_value(uint16_t cv);
+void timer_reset_millis();
+void wait(int ms);
+uint32_t millis();
+uint32_t minutes();
 
-
-#endif /* TIMER_H_ */
+#endif
