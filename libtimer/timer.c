@@ -63,10 +63,10 @@ __interrupt void int_callback_millis_count(void) {
 }
 
 void wait(int ms) {
-    int time = millis();
-    int new_time = millis();
+    int init_time = millis();
+    int curr_time = init_time;
 
     do {
-        new_time = millis();
-    } while (new_time - time > ms);
+        curr_time = millis();
+    } while (curr_time - init_time < ms);
 }
