@@ -1,5 +1,9 @@
+#ifndef __uart_h
+#define __uart_h
+
 #include <msp430.h>
 #include <stdint.h>
+#include "circular_buffer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,18 +11,19 @@ extern "C" {
 
 enum UART_speed_t {bps9600=0, bps19200, bps38400, bps57600, bps115200, n_speeds};
 
-typedef struct __UART_t {
+void uart_config(enum UART_speed_t baudrate);
 
-    //Methods
+void uart_putchar(char ch);
+char uart_getchar();
 
-    void(*write)(const uint8_t* data, int data_len);
-    void(*read)(char* buffer, int buffer_size);
+void uart_write(const char* src, int n);
+void uart_writeline(const char* str);
 
-} UART;
-
-void uart_global_config(enum UART_speed_t baudrate);
-void uart_init(UART* uc);
+void uart_read(char* dst, int n);
+int uart_async_read(char* dst, int maxn);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif

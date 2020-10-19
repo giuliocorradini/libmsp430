@@ -1,5 +1,8 @@
-#include <uart.h>
-#include <stdbool.h>
+#include "uart.h"
+#include <string.h>
+
+#define UART_RX_BUFFER_SIZE 128
+static circular_buffer_t __buffer;
 
 const uint16_t prescaler_val[n_speeds] = {
                                           109,  //9600bps
@@ -10,48 +13,14 @@ const uint16_t prescaler_val[n_speeds] = {
 };
 
 const uint8_t modulator_val[n_speeds] = {
-                                         UCBRS_2,     //9600bps
+                                         0,     //9600bps
                                          UCBRS_5,     //19200bps
                                          UCBRS_2,     //38400bps
                                          UCBRS_1,     //57600bps
                                          UCBRS_1      //115200bps
 };
 
-void uart_write(const uint8_t* data, int data_len) {
-
-    int i;
-    for(i=0; i<data_len; i++) {
-        while(!(UCA1IFG & UCTXIFG));   //wait until buffer is empty
-        UCA1TXBUF = data[i];
-    }
-
-}
-
-typedef struct __ring_buffer {
-    uint8_t *pool;
-    unsigned int size;
-    unsigned int head;
-    unsigned int tail;
-    unsigned int elements;
-} buffer_t;
-
-static uint8_t buffer_rx_pool[256];
-static buffer_t rx_buffer = {.pool = buffer_rx_pool, .size = 256, .head=0, .tail=0, .elements=0};
-
-void uart_read(char* buffer, int buffer_size) {
-
-    unsigned int read_bytes = 0;
-
-    while(read_bytes != buffer_size) {
-        while(rx_buffer.elements == 0);;
-        buffer[read_bytes++] = rx_buffer.pool[rx_buffer.head++];
-        rx_buffer.head %= rx_buffer.size;
-        rx_buffer.elements--;
-    }
-
-}
-
-void uart_global_config(enum UART_speed_t baudrate) {
+void uart_config(enum UART_speed_t baudrate) {
 
     uint16_t prescaler = prescaler_val[baudrate];
     uint8_t modulator = modulator_val[baudrate];
@@ -65,6 +34,7 @@ void uart_global_config(enum UART_speed_t baudrate) {
 
     P4SEL |= (BIT4 | BIT5);
 
+    UCA1MCTL = UCBRS_2 + UCBRF_0;
 
     UCA1CTL1 &= ~UCSWRST;   //Exit config mode
 
@@ -72,23 +42,54 @@ void uart_global_config(enum UART_speed_t baudrate) {
     UCA1IE |= UCRXIE;
     __enable_interrupt();
 
+    cbInit(&__buffer, UART_RX_BUFFER_SIZE);
+
 }
 
-void uart_init(UART *uc) {
-    uc->write = uart_write;
-    uc->read = uart_read;
+void uart_putchar(char ch) {
+    while(!(UCA1IFG & UCTXIFG));
+    UCA1TXBUF = ch;
+}
+
+char uart_getchar() {
+    char c;
+    while(!cbRead(&__buffer, &c));;
+
+    return c;
+}
+
+void uart_write(const char* src, int n) {
+
+    for(int i=0; i<n; i++) {
+        uart_putchar(src[i]);
+    }
+
+}
+
+void uart_writeline(const char* str) {
+    uart_write(str, strlen(str));
+}
+
+void uart_read(char* dst, int n) {
+
+    for(int i=0; i<n; i++) {
+        dst[i] = uart_getchar();
+    }
+
+}
+
+int uart_async_read(char* dst, int n) {
+    int read_bytes = 0;
+    while(!cbIsEmpty(&__buffer) && read_bytes < n) {
+        cbRead(&__buffer, dst+read_bytes);
+        read_bytes++;
+    }
 }
 
 
 #pragma vector = USCI_A1_VECTOR
 __interrupt void uart_read_isr(void) {
 
-    if(rx_buffer.head != rx_buffer.tail || rx_buffer.elements == 0) {
-        rx_buffer.pool[rx_buffer.tail++] = UCA1RXBUF;
-        rx_buffer.tail %= rx_buffer.size;
-        rx_buffer.elements++;
-    } else { //Full buffer, discard incoming bytes
-        UCA1IFG &= ~UCRXIFG;
-    }
+    cbWrite(&__buffer, UCA1RXBUF);
 
 }

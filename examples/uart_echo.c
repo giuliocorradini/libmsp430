@@ -4,15 +4,12 @@
 int main(void) {
     WDTCTL = WDTPW | WDTHOLD;
 
-    UART uart;
-    uart_global_config(bps9600);
-    uart_init(&uart);
-
+    uart_config(bps9600);
     uint8_t buf;
 
     while(true) {
-        uart.read((char*)&buf, 1);
-        uart.write(&buf, 1);
+        uart_read(&buf, 1);
+        uart_write(&buf, 1);
     }
 
     return 0;

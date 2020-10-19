@@ -24,8 +24,8 @@ int main(void) {
 
     AnalogDigitalConverter adc12 = AnalogDigitalConverter(INTERNAL_TEMPERATURE_SENSOR_PIN, 30.0, -CALADC12_15V_30C, degC_per_bit);
 
-    uart_global_config(bps9600);
-    UART uart;
+    uart_config(bps9600);
+    UART_t uart;
     uart_init(&uart);
 
 	while(true){
