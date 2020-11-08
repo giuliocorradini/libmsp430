@@ -15,6 +15,7 @@ void uart_config(enum UART_speed_t baudrate);
 
 void uart_putchar(char ch);
 char uart_getchar();
+char uart_async_getchar(int *err);
 
 void uart_write(const char* src, int n);
 void uart_writeline(const char* str);

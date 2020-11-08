@@ -58,6 +58,16 @@ char uart_getchar() {
     return c;
 }
 
+char uart_async_getchar(int *err) {
+    char c;
+    if(cbRead(&__buffer, &c)) {
+        return c;
+    } else {
+        *err = 1;
+        return 0x00;
+    }
+}
+
 void uart_write(const char* src, int n) {
 
     for(int i=0; i<n; i++) {
